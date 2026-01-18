@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Georgia Jewel 50 — Elevation Profile</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #F5F5F5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .container {
+      max-width: 1500px;
+      width: 95%;
+      margin: 0 auto;
+    }
+    .profile-wrapper {
+      position: relative;
+      background: #FAFAFA;
+      border-radius: 12px;
+      overflow: visible;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 10px;
+    }
+    .profile-wrapper svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 80vh;
+    }
+    
+    .tooltip {
+      position: absolute;
+      pointer-events: auto;
+      background: #fff;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 220px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.15s, transform 0.15s;
+      z-index: 1000;
+    }
+    .tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #E8E8E8;
+    }
+    .tooltip-marker {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tooltip-marker.major {
+      background: #9B6B9E;
+      box-shadow: 0 0 6px rgba(155, 107, 158, 0.4);
+    }
+    .tooltip-marker.minor {
+      background: #8AABA3;
+    }
+    .tooltip-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #2C3E50;
+      letter-spacing: 0.5px;
+    }
+    .tooltip-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 14px;
+      font-size: 12px;
+    }
+    .tooltip-label {
+      color: #7A8A8A;
+      text-transform: uppercase;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .tooltip-value {
+      color: #3A6B5C;
+      font-weight: 600;
+    }
+    .tooltip-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .tooltip-badge {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tooltip-badge.crew {
+      background: rgba(155, 107, 158, 0.15);
+      color: #9B6B9E;
+      border: 1px solid rgba(155, 107, 158, 0.3);
+    }
+    .tooltip-badge.crew.clickable {
+      cursor: pointer;
+      pointer-events: auto;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tooltip-badge.crew.clickable:hover {
+      background: rgba(155, 107, 158, 0.3);
+      border-color: rgba(155, 107, 158, 0.5);
+    }
+    .tooltip-badge.crew.clickable::after {
+      content: "📍";
+      font-size: 10px;
+    }
+    .tooltip-badge.drop {
+      background: rgba(90, 154, 139, 0.12);
+      color: #3A6B5C;
+      border: 1px solid rgba(90, 154, 139, 0.3);
+    }
+    .tooltip-badge.pacer {
+      background: rgba(70, 130, 180, 0.12);
+      color: #4682B4;
+      border: 1px solid rgba(70, 130, 180, 0.3);
+    }
+    
+    .station-marker {
+      cursor: pointer;
+    }
+    .station-marker:hover circle {
+      filter: brightness(1.15);
+    }
+    
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      color: #888;
+      font-size: 13px;
+    }
+    .footer a {
+      color: #9B6B9E;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .download-btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 28px;
+      background: linear-gradient(135deg, #9B6B9E 0%, #7D5580 100%);
+      color: #fff;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(155, 107, 158, 0.3);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="profile-wrapper" id="profile-wrapper">
+      <div style="padding: 40px; text-align: center; color: #888;">Loading elevation profile...</div>
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+    <div class="footer">
+      <p>Elevation data sourced from <a href="https://caltopo.com/m/2JVTCH3" target="_blank">CalTopo</a></p>
+      <a href="gajewel-50-elevation-profile.svg" download class="download-btn">Download SVG</a>
+    </div>
+  </div>
+
+  <script>
+    // Coordinates for Google Maps links
+    const coords = {
+      snakeCreek: "34.664175,-85.059646",
+      dryCreek: "34.578140,-85.130040",
+      conventionCenter: "34.758513,-85.006347"
+    };
+
+    const stations = [
+      {"name": "Start", "mile": 0, "miles_to_next": 6.7, "miles_to_finish": 50, "cutoff": "7:30 AM", "crew": false, "drop": false, "pacer": false, "elevation": 780, "coords": coords.conventionCenter},
+      {"name": "Finish Loop #1", "mile": 6.7, "miles_to_next": 7.2, "miles_to_finish": 43.3, "cutoff": "—", "crew": false, "drop": false, "pacer": false, "elevation": 830, "coords": coords.dryCreek},
+      {"name": "Finish Loop #2", "mile": 13.9, "miles_to_next": 7.5, "miles_to_finish": 36.1, "cutoff": "11:20 AM", "crew": false, "drop": false, "pacer": false, "elevation": 970, "coords": coords.dryCreek},
+      {"name": "John's Mtn", "mile": 21.4, "miles_to_next": 3.3, "miles_to_finish": 28.6, "cutoff": "—", "crew": false, "drop": false, "pacer": false, "elevation": 1750},
+      {"name": "Pocket Rd.", "mile": 24.7, "miles_to_next": 6.5, "miles_to_finish": 25.3, "cutoff": "—", "crew": false, "drop": false, "pacer": false, "elevation": 1000},
+      {"name": "Snake Creek", "mile": 31.2, "miles_to_next": 7.2, "miles_to_finish": 18.8, "cutoff": "4:00 PM", "crew": true, "drop": true, "pacer": true, "elevation": 1260, "coords": coords.snakeCreek},
+      {"name": "Stover", "mile": 38.4, "miles_to_next": 8.4, "miles_to_finish": 11.6, "cutoff": "—", "crew": false, "drop": false, "pacer": false, "elevation": 1420},
+      {"name": "Powerlines", "mile": 46.8, "miles_to_next": 3.2, "miles_to_finish": 3.2, "cutoff": "9:45 PM", "crew": false, "drop": false, "pacer": false, "elevation": 1550},
+      {"name": "Convention Center", "mile": 50, "miles_to_next": 0, "miles_to_finish": 0, "cutoff": "11:00 PM", "crew": false, "drop": false, "pacer": false, "elevation": 1050, "coords": coords.conventionCenter}
+    ];
+
+    async function loadProfile() {
+      try {
+        const response = await fetch('gajewel-50-elevation-profile.svg');
+        const svgText = await response.text();
+        document.getElementById('profile-wrapper').innerHTML = svgText;
+        initTooltips();
+      } catch (err) {
+        console.error('Failed to load SVG:', err);
+        document.getElementById('profile-wrapper').innerHTML = '<div style="padding: 40px; text-align: center; color: #c66;">Failed to load profile</div>';
+      }
+    }
+
+    function initTooltips() {
+      const tooltip = document.getElementById('tooltip');
+      const wrapper = document.getElementById('profile-wrapper');
+      const markers = wrapper.querySelectorAll('.station-marker');
+
+      if (markers.length === 0) {
+        console.warn('No station markers found');
+        return;
+      }
+
+      markers.forEach(marker => {
+        const idx = parseInt(marker.getAttribute('data-index'));
+        const station = stations[idx];
+        if (!station) return;
+
+        marker.addEventListener('mouseenter', (e) => {
+          const isMajor = station.crew || station.drop || station.pacer || station.mile === 0 || station.mile === 50;
+          
+          let badges = '';
+          if (station.crew) {
+            if (station.coords) {
+              const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.coords}`;
+              badges += `<a href="${mapsUrl}" target="_blank" class="tooltip-badge crew clickable">Crew Access</a>`;
+            } else {
+              badges += '<span class="tooltip-badge crew">Crew Access</span>';
+            }
+          }
+          if (station.drop) badges += '<span class="tooltip-badge drop">Drop Bags</span>';
+          if (station.pacer) badges += '<span class="tooltip-badge pacer">Pacer OK</span>';
+
+          tooltip.innerHTML = `
+            <div class="tooltip-header">
+              <div class="tooltip-marker ${isMajor ? 'major' : 'minor'}"></div>
+              <div class="tooltip-name">${station.name}</div>
+            </div>
+            <div class="tooltip-grid">
+              <div class="tooltip-label">Mile</div>
+              <div class="tooltip-value">${station.mile}</div>
+              <div class="tooltip-label">Elevation</div>
+              <div class="tooltip-value">${station.elevation.toLocaleString()}'</div>
+              <div class="tooltip-label">To Next AS</div>
+              <div class="tooltip-value">${station.miles_to_next ? station.miles_to_next + ' mi' : '—'}</div>
+              <div class="tooltip-label">To Finish</div>
+              <div class="tooltip-value">${station.miles_to_finish} mi</div>
+              <div class="tooltip-label">Cutoff</div>
+              <div class="tooltip-value">${station.cutoff || '—'}</div>
+            </div>
+            ${badges ? '<div class="tooltip-badges">' + badges + '</div>' : ''}
+          `;
+
+          tooltip.style.visibility = 'hidden';
+          tooltip.classList.add('visible');
+          
+          const rect = marker.getBoundingClientRect();
+          const wrapperRect = wrapper.getBoundingClientRect();
+          const tooltipRect = tooltip.getBoundingClientRect();
+          
+          let left = rect.left - wrapperRect.left + rect.width / 2 - tooltipRect.width / 2;
+          let top = rect.top - wrapperRect.top - tooltipRect.height - 12;
+          
+          if (left < 10) left = 10;
+          if (left + tooltipRect.width > wrapperRect.width - 10) {
+            left = wrapperRect.width - tooltipRect.width - 10;
+          }
+          if (top < 10) {
+            top = rect.bottom - wrapperRect.top + 12;
+          }
+          
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+          tooltip.style.visibility = 'visible';
+        });
+
+        marker.addEventListener('mouseleave', (e) => {
+          // Don't hide if moving to the tooltip
+          setTimeout(() => {
+            if (!tooltip.matches(':hover') && !marker.matches(':hover')) {
+              tooltip.classList.remove('visible');
+            }
+          }, 100);
+        });
+      });
+
+      // Keep tooltip visible when hovering over it
+      tooltip.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+      
+      console.log('Initialized tooltips for', markers.length, 'markers');
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>
