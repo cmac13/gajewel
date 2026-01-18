@@ -196,7 +196,7 @@
     <div class="tooltip" id="tooltip"></div>
     <div class="footer">
       <p>Elevation data sourced from <a href="https://caltopo.com/m/0HL0K" target="_blank">CalTopo</a></p>
-      <a href="gajewel-elevation-profile.svg" download class="download-btn">Download SVG</a>
+      <a href="https://gajewel.vercel.app/gajewel-elevation-profile.svg" download class="download-btn">Download SVG</a>
     </div>
   </div>
 
@@ -231,7 +231,7 @@
 
     async function loadProfile() {
       try {
-        const response = await fetch('gajewel-elevation-profile.svg');
+        const response = await fetch('https://gajewel.vercel.app/gajewel-elevation-profile.svg');
         const svgText = await response.text();
         document.getElementById('profile-wrapper').innerHTML = svgText;
         initTooltips();
