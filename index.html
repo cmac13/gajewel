@@ -157,6 +157,68 @@
       filter: brightness(1.15);
     }
     
+    /* Interactive scrubber styles */
+    .scrubber-line {
+      position: absolute;
+      width: 2px;
+      background: rgba(155, 107, 158, 0.8);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 100;
+    }
+    .scrubber-line.visible {
+      opacity: 1;
+    }
+    .scrubber-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #9B6B9E;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 101;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .scrubber-dot.visible {
+      opacity: 1;
+    }
+    .scrubber-indicator {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #E0E0E0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 102;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .scrubber-indicator.visible {
+      opacity: 1;
+    }
+    .scrubber-indicator .mile {
+      font-weight: 700;
+      color: #9B6B9E;
+    }
+    .scrubber-indicator .elevation {
+      color: #3A6B5C;
+      margin-left: 12px;
+    }
+    .scrubber-indicator .label {
+      font-size: 10px;
+      color: #7A8A8A;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
     .footer {
       margin-top: 30px;
       text-align: center;
@@ -193,6 +255,9 @@
     <div class="profile-wrapper" id="profile-wrapper">
       <div style="padding: 40px; text-align: center; color: #888;">Loading elevation profile...</div>
     </div>
+    <div class="scrubber-line" id="scrubber-line"></div>
+    <div class="scrubber-dot" id="scrubber-dot"></div>
+    <div class="scrubber-indicator" id="scrubber-indicator"></div>
     <div class="tooltip" id="tooltip"></div>
     <div class="footer">
       <p>Elevation data sourced from <a href="https://caltopo.com/m/0HL0K" target="_blank">CalTopo</a></p>
@@ -231,7 +296,7 @@
 
     async function loadProfile() {
       try {
-        const response = await fetch('https://gajewel.vercel.app/gajewel-elevation-profile.svg');
+        const response = await fetch('gajewel-elevation-profile.svg');
         const svgText = await response.text();
         document.getElementById('profile-wrapper').innerHTML = svgText;
         initTooltips();
@@ -330,6 +395,172 @@
       });
       
       console.log('Initialized tooltips for', markers.length, 'markers');
+      
+      // Initialize scrubber after tooltips
+      initScrubber();
+    }
+
+    function initScrubber() {
+      const wrapper = document.getElementById('profile-wrapper');
+      const scrubberLine = document.getElementById('scrubber-line');
+      const scrubberDot = document.getElementById('scrubber-dot');
+      const scrubberIndicator = document.getElementById('scrubber-indicator');
+      const svg = wrapper.querySelector('svg');
+      
+      if (!svg) return;
+      
+      // Chart bounds in SVG coordinates
+      const chartLeft = 70, chartRight = 1330;
+      const chartTop = 100, chartBottom = 470;
+      const totalMiles = 100;
+      const elevMin = 600, elevMax = 2000;
+      
+      // Extract elevation profile from SVG path
+      const pathElement = svg.querySelector('path[d^="M 70"]');
+      let elevationData = [];
+      
+      if (pathElement) {
+        const d = pathElement.getAttribute('d');
+        const coords = d.match(/[LM]\s*([\d.]+)\s+([\d.]+)/g);
+        if (coords) {
+          coords.forEach(coord => {
+            const parts = coord.match(/([\d.]+)\s+([\d.]+)/);
+            if (parts) {
+              const x = parseFloat(parts[1]);
+              const y = parseFloat(parts[2]);
+              if (x >= chartLeft && x <= chartRight && y >= chartTop && y <= chartBottom) {
+                elevationData.push({ x, y });
+              }
+            }
+          });
+        }
+      }
+      
+      // Function to get elevation at a given x position
+      function getElevationAtX(x) {
+        if (elevationData.length === 0) return null;
+        
+        // Find surrounding points
+        let before = elevationData[0];
+        let after = elevationData[elevationData.length - 1];
+        
+        for (let i = 0; i < elevationData.length - 1; i++) {
+          if (elevationData[i].x <= x && elevationData[i + 1].x >= x) {
+            before = elevationData[i];
+            after = elevationData[i + 1];
+            break;
+          }
+        }
+        
+        // Interpolate
+        const t = after.x === before.x ? 0 : (x - before.x) / (after.x - before.x);
+        const y = before.y + t * (after.y - before.y);
+        
+        // Convert y to elevation
+        const elevation = elevMin + (chartBottom - y) / (chartBottom - chartTop) * (elevMax - elevMin);
+        return { y, elevation: Math.round(elevation) };
+      }
+      
+      function updateScrubber(clientX, clientY) {
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+        
+        // Calculate position within SVG
+        const scaleX = 1400 / svgRect.width; // SVG viewBox width
+        const scaleY = 700 / svgRect.height; // SVG viewBox height
+        
+        const svgX = (clientX - svgRect.left) * scaleX;
+        const svgY = (clientY - svgRect.top) * scaleY;
+        
+        // Check if within chart bounds
+        if (svgX < chartLeft || svgX > chartRight || svgY < chartTop - 30 || svgY > chartBottom + 100) {
+          hideScrubber();
+          return;
+        }
+        
+        // Calculate mile
+        const mile = ((svgX - chartLeft) / (chartRight - chartLeft)) * totalMiles;
+        
+        // Get elevation at this position
+        const elevData = getElevationAtX(svgX);
+        if (!elevData) {
+          hideScrubber();
+          return;
+        }
+        
+        // Convert back to screen coordinates
+        const screenX = svgX / scaleX + svgRect.left - wrapperRect.left;
+        const screenYTop = chartTop / scaleY + svgRect.top - wrapperRect.top;
+        const screenYBottom = chartBottom / scaleY + svgRect.top - wrapperRect.top;
+        const screenYDot = elevData.y / scaleY + svgRect.top - wrapperRect.top;
+        
+        // Position scrubber line
+        scrubberLine.style.left = screenX + 'px';
+        scrubberLine.style.top = screenYTop + 'px';
+        scrubberLine.style.height = (screenYBottom - screenYTop) + 'px';
+        scrubberLine.classList.add('visible');
+        
+        // Position scrubber dot
+        scrubberDot.style.left = screenX + 'px';
+        scrubberDot.style.top = screenYDot + 'px';
+        scrubberDot.classList.add('visible');
+        
+        // Update and position indicator
+        scrubberIndicator.innerHTML = `
+          <span class="label">Mile</span> <span class="mile">${mile.toFixed(1)}</span>
+          <span class="label">Elev</span> <span class="elevation">${elevData.elevation.toLocaleString()}'</span>
+        `;
+        
+        // Position indicator above the dot, or below if too close to top
+        let indicatorTop = screenYDot - 45;
+        if (indicatorTop < 10) {
+          indicatorTop = screenYDot + 20;
+        }
+        
+        scrubberIndicator.style.left = (screenX + 10) + 'px';
+        scrubberIndicator.style.top = indicatorTop + 'px';
+        
+        // Adjust if too close to right edge
+        const indicatorRect = scrubberIndicator.getBoundingClientRect();
+        if (screenX + 10 + indicatorRect.width > wrapperRect.width - 10) {
+          scrubberIndicator.style.left = (screenX - indicatorRect.width - 10) + 'px';
+        }
+        
+        scrubberIndicator.classList.add('visible');
+      }
+      
+      function hideScrubber() {
+        scrubberLine.classList.remove('visible');
+        scrubberDot.classList.remove('visible');
+        scrubberIndicator.classList.remove('visible');
+      }
+      
+      // Mouse events
+      wrapper.addEventListener('mousemove', (e) => {
+        updateScrubber(e.clientX, e.clientY);
+      });
+      
+      wrapper.addEventListener('mouseleave', hideScrubber);
+      
+      // Touch events for mobile
+      wrapper.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          updateScrubber(touch.clientX, touch.clientY);
+        }
+      }, { passive: true });
+      
+      wrapper.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          updateScrubber(touch.clientX, touch.clientY);
+        }
+      }, { passive: true });
+      
+      wrapper.addEventListener('touchend', hideScrubber);
+      wrapper.addEventListener('touchcancel', hideScrubber);
+      
+      console.log('Initialized scrubber with', elevationData.length, 'elevation points');
     }
 
     loadProfile();
