@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Georgia Jewel 18 — Elevation Profile</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #F5F5F5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .container {
+      max-width: 1500px;
+      width: 95%;
+      margin: 0 auto;
+    }
+    .profile-wrapper {
+      position: relative;
+      background: #FAFAFA;
+      border-radius: 12px;
+      overflow: visible;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 10px;
+    }
+    .profile-wrapper svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 80vh;
+    }
+    
+    .tooltip {
+      position: absolute;
+      pointer-events: auto;
+      background: #fff;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 220px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.15s, transform 0.15s;
+      z-index: 1000;
+    }
+    .tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #E8E8E8;
+    }
+    .tooltip-marker {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tooltip-marker.major {
+      background: #9B6B9E;
+      box-shadow: 0 0 6px rgba(155, 107, 158, 0.4);
+    }
+    .tooltip-marker.minor {
+      background: #8AABA3;
+    }
+    .tooltip-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #2C3E50;
+      letter-spacing: 0.5px;
+    }
+    .tooltip-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 14px;
+      font-size: 12px;
+    }
+    .tooltip-label {
+      color: #7A8A8A;
+      text-transform: uppercase;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .tooltip-value {
+      color: #3A6B5C;
+      font-weight: 600;
+    }
+    .tooltip-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .tooltip-badge {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tooltip-badge.crew {
+      background: rgba(155, 107, 158, 0.15);
+      color: #9B6B9E;
+      border: 1px solid rgba(155, 107, 158, 0.3);
+    }
+    .tooltip-badge.crew.clickable {
+      cursor: pointer;
+      pointer-events: auto;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tooltip-badge.crew.clickable:hover {
+      background: rgba(155, 107, 158, 0.3);
+      border-color: rgba(155, 107, 158, 0.5);
+    }
+    .tooltip-badge.crew.clickable::after {
+      content: "📍";
+      font-size: 10px;
+    }
+    .tooltip-badge.drop {
+      background: rgba(90, 154, 139, 0.12);
+      color: #3A6B5C;
+      border: 1px solid rgba(90, 154, 139, 0.3);
+    }
+    .tooltip-badge.pacer {
+      background: rgba(70, 130, 180, 0.12);
+      color: #4682B4;
+      border: 1px solid rgba(70, 130, 180, 0.3);
+    }
+    
+    .station-marker {
+      cursor: pointer;
+    }
+    .station-marker:hover circle {
+      filter: brightness(1.15);
+    }
+    
+    /* Interactive scrubber styles */
+    .scrubber-line {
+      position: absolute;
+      width: 2px;
+      background: rgba(155, 107, 158, 0.8);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 100;
+    }
+    .scrubber-line.visible {
+      opacity: 1;
+    }
+    .scrubber-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #9B6B9E;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 101;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .scrubber-dot.visible {
+      opacity: 1;
+    }
+    .scrubber-indicator {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #E0E0E0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 102;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .scrubber-indicator.visible {
+      opacity: 1;
+    }
+    .scrubber-indicator .mile {
+      font-weight: 700;
+      color: #9B6B9E;
+    }
+    .scrubber-indicator .elevation {
+      color: #3A6B5C;
+      margin-left: 12px;
+    }
+    .scrubber-indicator .label {
+      font-size: 10px;
+      color: #7A8A8A;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      color: #888;
+      font-size: 13px;
+    }
+    .footer a {
+      color: #9B6B9E;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .download-btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 28px;
+      background: linear-gradient(135deg, #9B6B9E 0%, #7D5580 100%);
+      color: #fff;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(155, 107, 158, 0.3);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="profile-wrapper" id="profile-wrapper">
+      <div style="padding: 40px; text-align: center; color: #888;">Loading elevation profile...</div>
+    </div>
+    <div class="scrubber-line" id="scrubber-line"></div>
+    <div class="scrubber-dot" id="scrubber-dot"></div>
+    <div class="scrubber-indicator" id="scrubber-indicator"></div>
+    <div class="tooltip" id="tooltip"></div>
+    <div class="footer">
+      <p>Elevation data sourced from <a href="https://caltopo.com/m/1QEGPU7" target="_blank">CalTopo</a></p>
+      <a href="https://gajewel.vercel.app/gajewel-18-elevation-profile.svg" download class="download-btn">Download SVG</a>
+    </div>
+  </div>
+
+  <script>
+    // Coordinates for Google Maps links
+    const coords = {
+      startsnakecreek: "34.663570,-85.060100",
+      stoverrd: "34.683190,-85.040400",
+      powerlines: "34.741470,-85.014290",
+      finish: "34.756670,-85.006540"
+    };
+    const stations = [
+      {"name": "Start Snake Creek", "mile": 0.0, "miles_to_next": 7.2, "miles_to_finish": 18.6, "cutoff": "8:30am", "crew": false, "drop": false, "pacer": false, "elevation": 1198, "coords": "34.663570,-85.060100"},
+      {"name": "Stover Rd.", "mile": 7.2, "miles_to_next": 8.2, "miles_to_finish": 11.4, "cutoff": "10:32am", "crew": false, "drop": false, "pacer": false, "elevation": 1509, "coords": "34.683190,-85.040400"},
+      {"name": "Powerlines", "mile": 15.4, "miles_to_next": 3.2, "miles_to_finish": 3.2, "cutoff": "1:17 pm", "crew": false, "drop": false, "pacer": false, "elevation": 1555, "coords": "34.741470,-85.014290"},
+      {"name": "Finish", "mile": 18.6, "miles_to_next": 0.0, "miles_to_finish": 0.0, "cutoff": "2:30 pm", "crew": false, "drop": false, "pacer": false, "elevation": 1073, "coords": "34.756670,-85.006540"}
+    ];
+
+    async function loadProfile() {
+      try {
+        const response = await fetch('gajewel-18-elevation-profile.svg');
+        const svgText = await response.text();
+        document.getElementById('profile-wrapper').innerHTML = svgText;
+        initTooltips();
+      } catch (err) {
+        console.error('Failed to load SVG:', err);
+        document.getElementById('profile-wrapper').innerHTML = '<div style="padding: 40px; text-align: center; color: #c66;">Failed to load profile</div>';
+      }
+    }
+
+    function initTooltips() {
+      const tooltip = document.getElementById('tooltip');
+      const wrapper = document.getElementById('profile-wrapper');
+      const markers = wrapper.querySelectorAll('.station-marker');
+
+      if (markers.length === 0) {
+        console.warn('No station markers found');
+        return;
+      }
+
+      markers.forEach(marker => {
+        const idx = parseInt(marker.getAttribute('data-index'));
+        const station = stations[idx];
+        if (!station) return;
+
+        marker.addEventListener('mouseenter', (e) => {
+          const isMajor = station.crew || station.drop || station.pacer || station.mile === 0 || station.mile === 18.6;
+          
+          let badges = '';
+          if (station.crew) {
+            if (station.coords) {
+              const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.coords}`;
+              badges += `<a href="${mapsUrl}" target="_blank" class="tooltip-badge crew clickable">Crew Access</a>`;
+            } else {
+              badges += '<span class="tooltip-badge crew">Crew Access</span>';
+            }
+          }
+          if (station.drop) badges += '<span class="tooltip-badge drop">Drop Bags</span>';
+          if (station.pacer) badges += '<span class="tooltip-badge pacer">Pacer OK</span>';
+
+          tooltip.innerHTML = `
+            <div class="tooltip-header">
+              <div class="tooltip-marker ${isMajor ? 'major' : 'minor'}"></div>
+              <div class="tooltip-name">${station.name}</div>
+            </div>
+            <div class="tooltip-grid">
+              <div class="tooltip-label">Mile</div>
+              <div class="tooltip-value">${station.mile}</div>
+              <div class="tooltip-label">Elevation</div>
+              <div class="tooltip-value">${station.elevation.toLocaleString()}'</div>
+              <div class="tooltip-label">To Next AS</div>
+              <div class="tooltip-value">${station.miles_to_next ? station.miles_to_next + ' mi' : '—'}</div>
+              <div class="tooltip-label">To Finish</div>
+              <div class="tooltip-value">${station.miles_to_finish} mi</div>
+              <div class="tooltip-label">Cutoff</div>
+              <div class="tooltip-value">${station.cutoff || '—'}</div>
+            </div>
+            ${badges ? '<div class="tooltip-badges">' + badges + '</div>' : ''}
+          `;
+
+          tooltip.style.visibility = 'hidden';
+          tooltip.classList.add('visible');
+          
+          const rect = marker.getBoundingClientRect();
+          const wrapperRect = wrapper.getBoundingClientRect();
+          const tooltipRect = tooltip.getBoundingClientRect();
+          
+          let left = rect.left - wrapperRect.left + rect.width / 2 - tooltipRect.width / 2;
+          let top = rect.top - wrapperRect.top - tooltipRect.height - 12;
+          
+          if (left < 10) left = 10;
+          if (left + tooltipRect.width > wrapperRect.width - 10) {
+            left = wrapperRect.width - tooltipRect.width - 10;
+          }
+          if (top < 10) {
+            top = rect.bottom - wrapperRect.top + 12;
+          }
+          
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+          tooltip.style.visibility = 'visible';
+        });
+
+        marker.addEventListener('mouseleave', (e) => {
+          // Don't hide if moving to the tooltip
+          setTimeout(() => {
+            if (!tooltip.matches(':hover') && !marker.matches(':hover')) {
+              tooltip.classList.remove('visible');
+            }
+          }, 100);
+        });
+      });
+
+      // Keep tooltip visible when hovering over it
+      tooltip.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+      
+      console.log('Initialized tooltips for', markers.length, 'markers');
+      
+      // Initialize scrubber after tooltips
+      initScrubber();
+    }
+
+    function initScrubber() {
+      const wrapper = document.getElementById('profile-wrapper');
+      const scrubberLine = document.getElementById('scrubber-line');
+      const scrubberDot = document.getElementById('scrubber-dot');
+      const scrubberIndicator = document.getElementById('scrubber-indicator');
+      const svg = wrapper.querySelector('svg');
+      
+      if (!svg) return;
+      
+      // Chart bounds in SVG coordinates
+      const chartLeft = 70, chartRight = 1330;
+      const chartTop = 100, chartBottom = 470;
+      const totalMiles = 18.6;
+      const elevMin = 600, elevMax = 2000;
+      
+      // Extract elevation profile from SVG path
+      const pathElement = svg.querySelector('path[d^="M 70"]');
+      let elevationData = [];
+      
+      if (pathElement) {
+        const d = pathElement.getAttribute('d');
+        const coords = d.match(/[LM]\s*([\d.]+)\s+([\d.]+)/g);
+        if (coords) {
+          coords.forEach(coord => {
+            const parts = coord.match(/([\d.]+)\s+([\d.]+)/);
+            if (parts) {
+              const x = parseFloat(parts[1]);
+              const y = parseFloat(parts[2]);
+              if (x >= chartLeft && x <= chartRight && y >= chartTop && y <= chartBottom) {
+                elevationData.push({ x, y });
+              }
+            }
+          });
+        }
+      }
+      
+      // Function to get elevation at a given x position
+      function getElevationAtX(x) {
+        if (elevationData.length === 0) return null;
+        
+        // Find surrounding points
+        let before = elevationData[0];
+        let after = elevationData[elevationData.length - 1];
+        
+        for (let i = 0; i < elevationData.length - 1; i++) {
+          if (elevationData[i].x <= x && elevationData[i + 1].x >= x) {
+            before = elevationData[i];
+            after = elevationData[i + 1];
+            break;
+          }
+        }
+        
+        // Interpolate
+        const t = after.x === before.x ? 0 : (x - before.x) / (after.x - before.x);
+        const y = before.y + t * (after.y - before.y);
+        
+        // Convert y to elevation
+        const elevation = elevMin + (chartBottom - y) / (chartBottom - chartTop) * (elevMax - elevMin);
+        return { y, elevation: Math.round(elevation) };
+      }
+      
+      function updateScrubber(clientX, clientY) {
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+        
+        // Calculate position within SVG
+        const scaleX = 1400 / svgRect.width; // SVG viewBox width
+        const scaleY = 700 / svgRect.height; // SVG viewBox height
+        
+        const svgX = (clientX - svgRect.left) * scaleX;
+        const svgY = (clientY - svgRect.top) * scaleY;
+        
+        // Check if within chart bounds
+        if (svgX < chartLeft || svgX > chartRight || svgY < chartTop - 30 || svgY > chartBottom + 100) {
+          hideScrubber();
+          return;
+        }
+        
+        // Calculate mile
+        const mile = ((svgX - chartLeft) / (chartRight - chartLeft)) * totalMiles;
+        
+        // Get elevation at this position
+        const elevData = getElevationAtX(svgX);
+        if (!elevData) {
+          hideScrubber();
+          return;
+        }
+        
+        // Convert back to screen coordinates
+        const screenX = svgX / scaleX + svgRect.left - wrapperRect.left;
+        const screenYTop = chartTop / scaleY + svgRect.top - wrapperRect.top;
+        const screenYBottom = chartBottom / scaleY + svgRect.top - wrapperRect.top;
+        const screenYDot = elevData.y / scaleY + svgRect.top - wrapperRect.top;
+        
+        // Position scrubber line
+        scrubberLine.style.left = screenX + 'px';
+        scrubberLine.style.top = screenYTop + 'px';
+        scrubberLine.style.height = (screenYBottom - screenYTop) + 'px';
+        scrubberLine.classList.add('visible');
+        
+        // Position scrubber dot
+        scrubberDot.style.left = screenX + 'px';
+        scrubberDot.style.top = screenYDot + 'px';
+        scrubberDot.classList.add('visible');
+        
+        // Update and position indicator
+        scrubberIndicator.innerHTML = `
+          <span class="label">Mile</span> <span class="mile">${mile.toFixed(1)}</span>
+          <span class="label">Elev</span> <span class="elevation">${elevData.elevation.toLocaleString()}'</span>
+        `;
+        
+        // Position indicator above the dot, or below if too close to top
+        let indicatorTop = screenYDot - 45;
+        if (indicatorTop < 10) {
+          indicatorTop = screenYDot + 20;
+        }
+        
+        scrubberIndicator.style.left = (screenX + 10) + 'px';
+        scrubberIndicator.style.top = indicatorTop + 'px';
+        
+        // Adjust if too close to right edge
+        const indicatorRect = scrubberIndicator.getBoundingClientRect();
+        if (screenX + 10 + indicatorRect.width > wrapperRect.width - 10) {
+          scrubberIndicator.style.left = (screenX - indicatorRect.width - 10) + 'px';
+        }
+        
+        scrubberIndicator.classList.add('visible');
+      }
+      
+      function hideScrubber() {
+        scrubberLine.classList.remove('visible');
+        scrubberDot.classList.remove('visible');
+        scrubberIndicator.classList.remove('visible');
+      }
+      
+      // Mouse events
+      wrapper.addEventListener('mousemove', (e) => {
+        updateScrubber(e.clientX, e.clientY);
+      });
+      
+      wrapper.addEventListener('mouseleave', hideScrubber);
+      
+      // Touch events for mobile
+      wrapper.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          updateScrubber(touch.clientX, touch.clientY);
+        }
+      }, { passive: true });
+      
+      wrapper.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          updateScrubber(touch.clientX, touch.clientY);
+        }
+      }, { passive: true });
+      
+      wrapper.addEventListener('touchend', hideScrubber);
+      wrapper.addEventListener('touchcancel', hideScrubber);
+      
+      console.log('Initialized scrubber with', elevationData.length, 'elevation points');
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>
